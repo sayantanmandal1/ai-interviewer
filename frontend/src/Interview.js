@@ -16,7 +16,7 @@ export default function Interview({ domain, onRestart }) {
   useEffect(() => {
     setLoading(true);
     axios
-      .post("http://127.0.0.1:8000/start", { domain })
+      .post("https://ai-interviewer-67b9.onrender.com/start", { domain })
       .then((res) => {
         console.log("Start response:", res.data);
         setSessionId(res.data.session_id);
@@ -69,7 +69,7 @@ export default function Interview({ domain, onRestart }) {
     }));
 
     axios
-      .post("http://127.0.0.1:8000/evaluate", {
+      .post("https://ai-interviewer-67b9.onrender.com/evaluate", {
         session_id: sessionId,
         answers: formattedAnswers,
       })
