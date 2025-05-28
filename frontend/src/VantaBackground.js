@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from "react";
+import * as THREE from "three";
 import NET from "vanta/dist/vanta.net.min";
+
+window.THREE = THREE;
 
 export default function VantaBackground() {
   const vantaRef = useRef(null);
   const vantaEffect = useRef(null);
 
   useEffect(() => {
-    if (!vantaEffect.current) {
+    if (!vantaEffect.current && vantaRef.current) {
       vantaEffect.current = NET({
         el: vantaRef.current,
         color: 0x4f46e5,
