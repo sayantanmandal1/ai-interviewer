@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import Interview from "./Interview";
 import DomainSelect from "./DomainSelect";
-import VantaBackground from "./VantaBackground";
+import ThreeBackground from "./ThreeBackground"; // <-- your new background
 
 export default function App() {
   const [domain, setDomain] = useState(null);
 
   return (
     <>
-      <VantaBackground />
+      
       <div className="app-container" style={styles.container}>
         {!domain ? (
           <DomainSelect onSelectDomain={setDomain} />
