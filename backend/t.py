@@ -1,0 +1,2 @@
+from llama_index import GPTVectorStoreIndex
+print(GPTVectorStoreIndex)

@@ -1,0 +1,61 @@
+# ---- GLOBAL IGNORE ----
+.env
+*.log
+*.tmp
+*.swp
+*.bak
+*.orig
+*.db
+*.sqlite3
+*.pid
+*.pkl
+*.jsonl
+.DS_Store
+Thumbs.db
+backend/docs
+# ---- IDEs ----
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ---- PYTHON BACKEND ----
+backend/__pycache__/
+backend/*.py[cod]
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/.venv/
+backend/venv/
+backend/env/
+backend/*.egg-info/
+backend/build/
+backend/dist/
+backend/*.egg
+backend/instance/
+backend/*.sqlite3
+backend/.coverage
+backend/.pylint.d/
+backend/.cache/
+backend/.DS_Store
+backend/.env
+
+# ---- FRONTEND REACT ----
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/.turbo/
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.env.test
+
+# ---- NODE MODULE LOGS ----
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- OS SPECIFIC ----
+*.DS_Store
+Icon?

@@ -1,0 +1,113 @@
+import re
+import json
+import uuid
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+from fastapi import HTTPException
+from utils import get_embedding
+from sklearn.metrics.pairwise import cosine_similarity
+from models import AnswerItem
+from typing import List
+
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+SESSIONS = {}
+
+class QAGenerator:
+    def __init__(self):
+        pass
+
+    def generate_questions(self, domain: str) -> dict:
+        prompt = f"""
+        Generate 10 mixed interview questions (MCQs + Descriptive) on {domain}.
+        Format: JSON list of objects with keys: id, question, type, correct_answer, options.
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a helpful interviewer assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1500,
+            )
+
+            content = response.choices[0].message.content
+            print("OpenAI raw response:", content)
+
+            # Try to extract JSON from triple backticks
+            json_pattern = r"```json\s*(\[[\s\S]*?\])\s*```"
+            match = re.search(json_pattern, content)
+            if match:
+                json_str = match.group(1)
+            else:
+                # Fallback: try to find first [...] JSON array in content
+                start = content.find('[')
+                end = content.rfind(']') + 1
+                json_str = content[start:end]
+
+            questions = json.loads(json_str)
+
+            # Validate question structure
+            if not isinstance(questions, list) or len(questions) == 0:
+                raise ValueError("No questions generated")
+
+            # Normalize question types to lowercase
+            for q in questions:
+                q['type'] = q.get('type', '').lower()
+                q['id'] = q.get('id', str(uuid.uuid4()))  # Ensure id present
+
+        except Exception as e:
+            print("OpenAI error or parsing failed:", e)
+            questions = self._generate_fallback_questions(domain)
+
+        session_id = str(uuid.uuid4())
+        SESSIONS[session_id] = questions
+        return {"session_id": session_id, "questions": questions}
+
+    def _generate_fallback_questions(self, domain):
+        # Provide dummy fallback questions to avoid empty UI
+        return [{
+            "id": i,
+            "question": f"Dummy question {i+1} about {domain}",
+            "type": "mcq",
+            "correct_answer": "Option A",
+            "options": ["Option A", "Option B", "Option C", "Option D"]
+        } for i in range(10)]
+
+    def evaluate_answers(self, session_id: str, answers: List[AnswerItem]) -> dict:
+        print("Current sessions:", SESSIONS.keys())
+
+        if session_id not in SESSIONS:
+            raise HTTPException(status_code=400, detail="Invalid session ID")
+
+        questions = SESSIONS[session_id]
+        total = 0
+
+        for ans in answers:
+            # Convert both ids to string for consistent comparison
+            question = next((q for q in questions if str(q['id']) == str(ans.id)), None)
+            if not question:
+                continue
+
+            if question['type'].lower() == 'mcq':
+                if ans.user_answer.strip().lower() == question['correct_answer'].strip().lower():
+                    total += 10
+            elif question['type'].lower() == 'descriptive':
+                emb_correct = get_embedding(question['correct_answer'])
+                emb_user = get_embedding(ans.user_answer)
+                sim = cosine_similarity([emb_correct], [emb_user])[0][0]
+                score = sim * 10
+                total += min(score, 10)
+            else:
+                continue
+
+        score = round(total, 2)
+        result = "Passed" if score > 60 else "Failed"
+        return {"score": score, "result": result}
+
+
