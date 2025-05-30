@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-
+from llama_index import SimpleDirectoryReader, VectorStoreIndex
 load_dotenv()
 
-from llama_index import SimpleDirectoryReader, VectorStoreIndex
+
 
 def build_index_for_language(lang):
     docs_path = f"./docs/{lang}"
