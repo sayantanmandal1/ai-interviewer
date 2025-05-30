@@ -1,9 +1,9 @@
-name: CI/CD - FastAPI AI Interview App
+name: CI/CD - AI Interview Engine
 
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build-and-deploy:
@@ -24,14 +24,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r backend/requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install ruff pytest
 
-      - name: Lint with Ruff
-        run: ruff check backend --fix
+      - name: Lint and auto-fix with Ruff
+        run: ruff check . --fix
 
-      - name: Run tests
-        run: pytest backend/tests
+      - name: Ensure no lint errors remain
+        run: ruff check .
+
+      - name: Run API Tests
+        run: pytest tests/
 
       - name: Trigger Render Deployment
         run: curl -X POST $RENDER_DEPLOY_HOOK
