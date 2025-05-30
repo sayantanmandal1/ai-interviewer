@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 
+from llama_index import StorageContext, load_index_from_storage
 load_dotenv()  # this loads environment variables from .env file
 
 from llama_index import StorageContext, load_index_from_storage
