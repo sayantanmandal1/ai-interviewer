@@ -18,6 +18,7 @@ backend/docs
 .idea/
 *.sublime-workspace
 *.sublime-project
+frontend/tailwindcss.exe
 
 # ---- PYTHON BACKEND ----
 backend/__pycache__/
