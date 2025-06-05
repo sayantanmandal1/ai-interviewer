@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { auth, db, googleProvider } from "./firebase";
+import { auth, googleProvider } from "./firebase";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 
 const styles = {
   container: {
@@ -245,7 +244,7 @@ const keyframes = `
 `;
 
 export default function Login({ onLoginSuccess = () => {}, switchToRegister = () => {} }) {
-  const [identifier, setIdentifier] = useState(""); // username or email
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -253,24 +252,12 @@ export default function Login({ onLoginSuccess = () => {}, switchToRegister = ()
   const [hoveredButton, setHoveredButton] = useState(null);
   const [focusedInput, setFocusedInput] = useState(null);
 
-  const handleEmailOrUsernameLogin = async (e) => {
+  const handleEmailLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     try {
-      let emailToUse = identifier;
-
-      // If input does NOT look like an email, treat it as a username
-      if (!identifier.includes("@")) {
-        const docSnap = await getDoc(doc(db, "usernames", identifier));
-        if (docSnap.exists()) {
-          emailToUse = docSnap.data().email;
-        } else {
-          throw new Error("Username not found");
-        }
-      }
-
-      await signInWithEmailAndPassword(auth, emailToUse, password);
+      await signInWithEmailAndPassword(auth, email, password);
       onLoginSuccess();
     } catch (err) {
       setError(err.message);
@@ -320,27 +307,27 @@ export default function Login({ onLoginSuccess = () => {}, switchToRegister = ()
             )}
 
             {/* Form */}
-            <form onSubmit={handleEmailOrUsernameLogin} style={styles.formContainer}>
-              {/* Email/Username Field */}
+            <form onSubmit={handleEmailLogin} style={styles.formContainer}>
+              {/* Email Field */}
               <div style={styles.fieldContainer}>
-                <label style={styles.label}>Email or Username</label>
+                <label style={styles.label}>Email</label>
                 <div style={styles.inputWrapper}>
                   <input
-                    type="text"
-                    placeholder="Enter your email or username"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                     style={{
                       ...styles.input,
                       paddingRight: '1rem',
-                      ...(focusedInput === 'identifier' ? styles.inputFocus : {})
+                      ...(focusedInput === 'email' ? styles.inputFocus : {})
                     }}
-                    onFocus={() => setFocusedInput('identifier')}
+                    onFocus={() => setFocusedInput('email')}
                     onBlur={() => setFocusedInput(null)}
                   />
                   <svg style={styles.inputIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                   </svg>
                 </div>
               </div>

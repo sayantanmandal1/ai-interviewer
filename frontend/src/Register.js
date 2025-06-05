@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 const styles = {
   container: {
@@ -226,6 +227,7 @@ const keyframes = `
 
 export default function Register({ onRegisterSuccess = () => {}, switchToLogin = () => {} }) {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -238,7 +240,15 @@ export default function Register({ onRegisterSuccess = () => {}, switchToLogin =
     setIsLoading(true);
     setError(null);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      // 1. Create Firebase user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+      // 2. Save username-to-email mapping in Firestore
+      await setDoc(doc(db, "usernames", username), {
+        email,
+        uid: userCredential.user.uid
+      });
+
       onRegisterSuccess();
     } catch (err) {
       setError(err.message);
@@ -283,6 +293,7 @@ export default function Register({ onRegisterSuccess = () => {}, switchToLogin =
                 Secure Account Creation
               </p>
               <ul style={styles.securityList}>
+                <li>Username must be unique</li>
                 <li>Password must be at least 6 characters long</li>
                 <li>Your data is encrypted and secure</li>
                 <li>Email verification available after signup</li>
@@ -291,6 +302,30 @@ export default function Register({ onRegisterSuccess = () => {}, switchToLogin =
 
             {/* Form */}
             <form onSubmit={handleRegister} style={styles.formContainer}>
+              {/* Username Field */}
+              <div style={styles.fieldContainer}>
+                <label style={styles.label}>Username</label>
+                <div style={styles.inputWrapper}>
+                  <input
+                    type="text"
+                    placeholder="Choose a unique username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    style={{
+                      ...styles.input,
+                      paddingRight: '1rem',
+                      ...(focusedInput === 'username' ? styles.inputFocus : {})
+                    }}
+                    onFocus={() => setFocusedInput('username')}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                  <svg style={styles.inputIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              </div>
+
               {/* Email Field */}
               <div style={styles.fieldContainer}>
                 <label style={styles.label}>Email Address</label>
