@@ -86,7 +86,9 @@ const styles = {
     paddingLeft: '3rem',
     background: 'rgba(255, 255, 255, 0.7)',
     backdropFilter: 'blur(10px)',
-    border: '2px solid #e5e7eb',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#e5e7eb', 
     borderRadius: '0.75rem',
     fontSize: '1rem',
     outline: 'none',
@@ -94,9 +96,10 @@ const styles = {
     boxSizing: 'border-box'
   },
   inputFocus: {
-    borderColor: '#6366f1',
+    borderColor: '#6366f1',       // keep this as is
     boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
   },
+
   inputIcon: {
     position: 'absolute',
     left: '1rem',

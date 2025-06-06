@@ -1,46 +1,134 @@
-import React, { useState, useEffect } from "react";
-import Interview from "./Interview";
-import DomainSelect from "./DomainSelect";
-import { auth } from "./firebase";
+import React, { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "./firebase";
+
 import Login from "./Login";
 import Register from "./Register";
+import DomainSelect from "./DomainSelect";
+import Interview from "./Interview";
+import NotFound from "./Notfound"; // 404 Page Component
 
 export default function App() {
-  const [domain, setDomain] = useState(null);
   const [user, setUser] = useState(null);
-  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
-    // Subscribe to auth state changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) setDomain(null);
     });
     return unsubscribe;
   }, []);
 
-  if (!user) {
-    return showRegister ? (
-      <Register switchToLogin={() => setShowRegister(false)} />
-    ) : (
-      <Login switchToRegister={() => setShowRegister(true)} />
-    );
-  }
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/domain" />} />
+        <Route
+          path="/login"
+          element={!user ? <LoginRedirect /> : <Navigate to="/domain" />}
+        />
+        <Route
+          path="/register"
+          element={!user ? <RegisterRedirect /> : <Navigate to="/domain" />}
+        />
+        <Route
+          path="/domain"
+          element={
+            <ProtectedRoute user={user}>
+              <DomainPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/interview/:domain"
+          element={
+            <ProtectedRoute user={user}>
+              <InterviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/interview" element={<Navigate to="/login" />} />
+
+        {/* Catch-all 404 route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
+  );
+}
+
+// 🔒 Wrapper to protect private routes
+function ProtectedRoute({ user, children }) {
+  return user ? children : <Navigate to="/login" />;
+}
+
+// Redirect helper to pass switch callbacks
+function LoginRedirect() {
+  const navigate = useNavigate();
+  return <Login switchToRegister={() => navigate("/register")} />;
+}
+
+function RegisterRedirect() {
+  const navigate = useNavigate();
+  return <Register switchToLogin={() => navigate("/login")} />;
+}
+
+// Domain selection page
+function DomainPage() {
+  const navigate = useNavigate();
+
+  const handleDomainSelect = (domain) => {
+    navigate(`/interview/${domain}`);
+  };
+
+  return (
+    <PageWrapper>
+      <DomainSelect onDomainSelect={handleDomainSelect} />
+    </PageWrapper>
+  );
+}
+
+// Interview page with "Back" navigation
+function InterviewPage() {
+  const { domain } = useParams();
+  const navigate = useNavigate();
+
+  return (
+    <PageWrapper>
+      <button
+        style={{ ...styles.navButton, alignSelf: "flex-start", marginBottom: 10 }}
+        onClick={() => navigate("/domain")}
+      >
+        ← Back to Domain Selection
+      </button>
+      <Interview domain={domain} resetDomain={() => navigate("/domain")} />
+    </PageWrapper>
+  );
+}
+
+// Shared wrapper with logout header
+function PageWrapper({ children }) {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/login");
+  };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <button style={styles.button} onClick={() => signOut(auth)}>
+        <button style={styles.button} onClick={handleLogout}>
           Logout
         </button>
       </div>
-
-      {!domain ? (
-        <DomainSelect onDomainSelect={setDomain} />
-      ) : (
-        <Interview domain={domain} resetDomain={() => setDomain(null)} />
-      )}
+      {children}
     </div>
   );
 }
@@ -72,5 +160,15 @@ const styles = {
     fontWeight: "600",
     fontSize: 16,
     transition: "background-color 0.3s ease",
+  },
+  navButton: {
+    backgroundColor: "#e5e7eb",
+    color: "#111827",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontWeight: "500",
+    fontSize: 14,
   },
 };
