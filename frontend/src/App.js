@@ -89,7 +89,7 @@ function DomainPage() {
 
   return (
     <PageWrapper>
-      <DomainSelect onDomainSelect={handleDomainSelect} />
+      <DomainSelect onSelectDomain={handleDomainSelect} />
     </PageWrapper>
   );
 }
