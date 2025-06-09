@@ -240,18 +240,18 @@ export default function Interview({ domain, onRestart }) {
         <div className="answer-section">
           {questionType === "mcq" ? (
             <div className="mcq-options">
-              {(question.options && question.options.length > 0) ? (
+              {question.options && Object.keys(question.options).length > 0 ? (
                 <AnimatePresence>
-                  {question.options.map((opt, i) => (
+                  {Object.entries(question.options).map(([key, value], i) => (
                     <motion.div
-                      key={i}
+                      key={key}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
                       className={`option-item ${
-                        answers[current]?.user_answer === opt ? "selected" : ""
+                        answers[current]?.user_answer === key ? "selected" : ""
                       }`}
-                      onClick={() => handleOptionSelect(opt)}
+                      onClick={() => handleOptionSelect(key)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -260,12 +260,14 @@ export default function Interview({ domain, onRestart }) {
                           className="radio-inner"
                           initial={false}
                           animate={{
-                            scale: answers[current]?.user_answer === opt ? 1 : 0,
+                            scale: answers[current]?.user_answer === key ? 1 : 0,
                           }}
                           transition={{ type: "spring", stiffness: 300 }}
                         />
                       </div>
-                      <span className="option-text">{opt}</span>
+                      <span className="option-text">
+                        <strong>{key.toUpperCase()}.</strong> {value}
+                      </span>
                     </motion.div>
                   ))}
                 </AnimatePresence>
