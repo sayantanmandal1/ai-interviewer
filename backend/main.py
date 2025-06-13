@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import QueryRequest, DomainRequest, AnswerSubmission
 from qa_engine import QAGenerator
 from llama_index_helper import load_index
-import openai, os
+import openai
+import os
 from dotenv import load_dotenv
-
+SESSIONS = {}
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
