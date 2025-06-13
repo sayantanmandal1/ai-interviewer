@@ -12,13 +12,21 @@ export default function Interview({ domain, onRestart }) {
   const [sessionId, setSessionId] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [level, setLevel] = useState("easy");
+  const [scores, setScores] = useState({ easy: null, medium: null, hard: null });
 
   useEffect(() => {
+    if (level === "easy" && questions.length === 0 && !result) {
+      fetchQuestions("easy");
+    }
+  }, [domain, level, questions.length, result]);
+
+
+  function fetchQuestions(levelType) {
     setLoading(true);
     axios
-      .post("https://ai-interviewer-67b9.onrender.com/start", { domain })
+      .post("https://ai-interviewer-67b9.onrender.com/start", { domain, level: levelType })
       .then((res) => {
-        console.log("Start response:", res.data);
         setSessionId(res.data.session_id);
         setQuestions(res.data.questions || []);
         setLoading(false);
@@ -27,7 +35,7 @@ export default function Interview({ domain, onRestart }) {
         alert("Failed to load questions.");
         setLoading(false);
       });
-  }, [domain]);
+  }
 
   function handleAnswerChange(value) {
     setAnswers((prev) => {
@@ -86,7 +94,6 @@ export default function Interview({ domain, onRestart }) {
       });
   }
 
-  // Loading Screen
   if (loading) {
     return (
       <div className="loading-container">
@@ -113,9 +120,10 @@ export default function Interview({ domain, onRestart }) {
     );
   }
 
-  // Results Screen
   if (result) {
     const isPassed = result.result === "Passed";
+    const currentScore = result.score;
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
@@ -135,19 +143,19 @@ export default function Interview({ domain, onRestart }) {
             animate={{ scale: 1 }}
             transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
           >
-            <div className="score-value">{result.score?.toFixed(0) ?? "0"}</div>
+            <div className="score-value">{currentScore?.toFixed(0) ?? "0"}</div>
             <div className="score-label">/ 100</div>
           </motion.div>
-          
+
           <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
             className="results-title"
           >
-            Interview Complete
+            Interview Level: {level.charAt(0).toUpperCase() + level.slice(1)}
           </motion.h2>
-          
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -164,22 +172,60 @@ export default function Interview({ domain, onRestart }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 }}
             onClick={() => {
+              setScores((prev) => ({ ...prev, [level]: currentScore }));
+
+              if (level === "easy" && currentScore >= 50) {
+                setLevel("medium");
+                fetchQuestions("medium");
+              } else if (level === "medium" && currentScore >= 50) {
+                setLevel("hard");
+                fetchQuestions("hard");
+              } else {
+                setLevel("final");
+              }
+
               setResult(null);
               setAnswers([]);
               setCurrent(0);
               setSelectedOption(null);
-              onRestart();
             }}
             className="restart-button"
           >
-            <span>Start New Interview</span>
+            <span>
+              {level === "hard" || result.result === "Failed"
+                ? "View Final Result"
+                : "Next Level"}
+            </span>
           </motion.button>
         </motion.div>
       </motion.div>
     );
   }
 
-  // No Questions
+  if (level === "final") {
+    const passed =
+      (scores.easy ?? 0) >= 80 ||
+      (scores.medium ?? 0) >= 60 ||
+      (scores.hard ?? 0) >= 40;
+
+    return (
+      <div className="results-container final-summary">
+        <h2>Final Interview Summary</h2>
+        <div className={`final-status ${passed ? "passed" : "failed"}`}>
+          {passed ? "You Passed the Interview 🎉" : "You Did Not Pass 😢"}
+        </div>
+        <ul className="score-breakdown">
+          <li>Easy Level Score: {scores.easy ?? "N/A"}</li>
+          <li>Medium Level Score: {scores.medium ?? "N/A"}</li>
+          <li>Hard Level Score: {scores.hard ?? "N/A"}</li>
+        </ul>
+        <button className="restart-button" onClick={onRestart}>
+          Start New Interview
+        </button>
+      </div>
+    );
+  }
+
   if (!questions.length) {
     return (
       <div className="no-questions">
@@ -201,7 +247,6 @@ export default function Interview({ domain, onRestart }) {
       transition={{ duration: 0.5, ease: "easeInOut" }}
       className="interview-container"
     >
-      {/* Progress Bar */}
       <div className="progress-container">
         <div className="progress-info">
           <span className="question-counter">
@@ -219,7 +264,6 @@ export default function Interview({ domain, onRestart }) {
         </div>
       </div>
 
-      {/* Question Card */}
       <motion.div
         className="question-card"
         initial={{ y: 20, opacity: 0 }}
@@ -231,12 +275,11 @@ export default function Interview({ domain, onRestart }) {
             {questionType === "mcq" ? "Multiple Choice" : "Text Answer"}
           </div>
         </div>
-        
+
         <h3 className="question-text">
           {question?.question?.trim() || "No question text available."}
         </h3>
 
-        {/* Answer Section */}
         <div className="answer-section">
           {questionType === "mcq" ? (
             <div className="mcq-options">
@@ -260,7 +303,8 @@ export default function Interview({ domain, onRestart }) {
                           className="radio-inner"
                           initial={false}
                           animate={{
-                            scale: answers[current]?.user_answer === key ? 1 : 0,
+                            scale:
+                              answers[current]?.user_answer === key ? 1 : 0,
                           }}
                           transition={{ type: "spring", stiffness: 300 }}
                         />
@@ -298,15 +342,21 @@ export default function Interview({ domain, onRestart }) {
           )}
         </div>
 
-        {/* Next Button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={nextQuestion}
           className="next-button"
-          disabled={!answers[current]?.user_answer || answers[current]?.user_answer.trim() === ""}
+          disabled={
+            !answers[current]?.user_answer ||
+            answers[current]?.user_answer.trim() === ""
+          }
         >
-          <span>{current + 1 === questions.length ? "Submit Interview" : "Next Question"}</span>
+          <span>
+            {current + 1 === questions.length
+              ? "Submit Interview"
+              : "Next Question"}
+          </span>
           <motion.div
             className="button-arrow"
             animate={{ x: [0, 5, 0] }}

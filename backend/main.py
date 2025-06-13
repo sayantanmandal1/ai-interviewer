@@ -32,9 +32,9 @@ async def query_index(data: QueryRequest):
 
 @app.post("/start")
 async def start_interview(request: DomainRequest):
-    output = qa.generate_questions(request.domain)
-    # output has keys: session_id, questions
+    output = qa.generate_questions(request.domain, request.level)
     return {"questions": output["questions"], "session_id": output["session_id"]}
+
 
 @app.post("/evaluate")
 async def evaluate_answers(request: AnswerSubmission):
@@ -48,3 +48,29 @@ async def evaluate_answers(request: AnswerSubmission):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Evaluation failed: {e}")
+    
+
+@app.get("/final_result")
+async def final_result(easy_id: str, medium_id: str = None, hard_id: str = None):
+    try:
+        easy_score = SESSIONS[easy_id]["score"]
+        medium_score = SESSIONS[medium_id]["score"] if medium_id else 0
+        hard_score = SESSIONS[hard_id]["score"] if hard_id else 0
+
+        passed = (
+            (easy_score >= 80) or 
+            (medium_score >= 60) or 
+            (hard_score >= 40)
+        )
+
+        return {
+            "passed": passed,
+            "easy_score": easy_score,
+            "medium_score": medium_score,
+            "hard_score": hard_score,
+            "final_result": "Passed" if passed else "Failed"
+        }
+
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Session ID missing or invalid: {e}")
+

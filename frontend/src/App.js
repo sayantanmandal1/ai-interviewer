@@ -107,7 +107,7 @@ function InterviewPage() {
       >
         ← Back to Domain Selection
       </button>
-      <Interview domain={domain} resetDomain={() => navigate("/domain")} />
+      <Interview domain={domain} onRestart={() => navigate("/domain")} />
     </PageWrapper>
   );
 }

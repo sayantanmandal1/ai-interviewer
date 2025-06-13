@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 
 class DomainRequest(BaseModel):
     domain: str
+    level: str = "easy"
 
 class QueryRequest(BaseModel):
     lang: str

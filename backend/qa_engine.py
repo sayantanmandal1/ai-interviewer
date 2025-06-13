@@ -19,10 +19,18 @@ class QAGenerator:
     def __init__(self):
         pass
 
-    def generate_questions(self, domain: str) -> dict:
+    def convert_options_to_dict(self,options):
+        if isinstance(options, list):
+            keys = ["a", "b", "c", "d"]
+            return {k: v for k, v in zip(keys, options)}
+        return options  # Already a dict or not applicable
+
+
+    def generate_questions(self, domain: str, level: str) -> dict:
         prompt = f"""
-        Generate 10 mixed interview questions (MCQs + Descriptive) on {domain}.
-        Format: JSON list of objects with keys: id, question, type, correct_answer, options.
+            Generate 10 {level} level interview questions (mix of MCQs + Descriptive) on {domain}.
+            Format: JSON list of objects with keys: id, question, type, correct_answer, options.
+            For MCQs, 'options' must be a list of 4 values.
         """
 
         try:
@@ -39,34 +47,43 @@ class QAGenerator:
             content = response.choices[0].message.content
             print("OpenAI raw response:", content)
 
-            # Try to extract JSON from triple backticks
+            # Try to extract JSON block
             json_pattern = r"```json\s*(\[[\s\S]*?\])\s*```"
             match = re.search(json_pattern, content)
             if match:
                 json_str = match.group(1)
             else:
-                # Fallback: try to find first [...] JSON array in content
+                # Fallback if no triple backticks
                 start = content.find('[')
                 end = content.rfind(']') + 1
                 json_str = content[start:end]
 
             questions = json.loads(json_str)
 
-            # Validate question structure
             if not isinstance(questions, list) or len(questions) == 0:
                 raise ValueError("No questions generated")
 
-            # Normalize question types to lowercase
             for q in questions:
                 q['type'] = q.get('type', '').lower()
-                q['id'] = q.get('id', str(uuid.uuid4()))  # Ensure id present
+                q['id'] = q.get('id', str(uuid.uuid4()))
+
+                if q['type'] == 'mcq':
+                    q['options'] = self.convert_options_to_dict(q.get('options', []))
+
 
         except Exception as e:
             print("OpenAI error or parsing failed:", e)
             questions = self._generate_fallback_questions(domain)
 
         session_id = str(uuid.uuid4())
-        SESSIONS[session_id] = questions
+        SESSIONS[session_id] = {
+            "questions": questions,
+            "domain": domain,
+            "level": level,
+            "score": None,
+            "result": None
+        }
+
         return {"session_id": session_id, "questions": questions}
 
     def _generate_fallback_questions(self, domain):
@@ -85,11 +102,10 @@ class QAGenerator:
         if session_id not in SESSIONS:
             raise HTTPException(status_code=400, detail="Invalid session ID")
 
-        questions = SESSIONS[session_id]
+        questions = SESSIONS[session_id]["questions"]
         total = 0
 
         for ans in answers:
-            # Convert both ids to string for consistent comparison
             question = next((q for q in questions if str(q['id']) == str(ans.id)), None)
             if not question:
                 continue
@@ -107,7 +123,10 @@ class QAGenerator:
                 continue
 
         score = round(total, 2)
-        result = "Passed" if score > 60 else "Failed"
-        return {"score": score, "result": result}
+        result = "Passed" if score >= 50 else "Failed"
 
+        SESSIONS[session_id]["score"] = score
+        SESSIONS[session_id]["result"] = result
+
+        return {"score": score, "result": result}
 
