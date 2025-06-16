@@ -1,6 +1,12 @@
+// Interview.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import QuestionCard from "./components/QuestionCard";
+import ResultsCard from "./components/ResultsCard";
+import LoadingScreen from "./components/LoadingScreen";
+import Timer from "./components/Timer";
+import FinalSummary from "./components/FinalSummary";
 import "./Interview.css";
 
 export default function Interview({ domain, onRestart }) {
@@ -14,6 +20,12 @@ export default function Interview({ domain, onRestart }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [level, setLevel] = useState("easy");
   const [scores, setScores] = useState({ easy: null, medium: null, hard: null });
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [timerActive, setTimerActive] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const TIMER_DURATION = 30; // configurable timer duration in seconds
 
   useEffect(() => {
     if (level === "easy" && questions.length === 0 && !result) {
@@ -21,11 +33,39 @@ export default function Interview({ domain, onRestart }) {
     }
   }, [domain, level, questions.length, result]);
 
+  useEffect(() => {
+    if (questions.length > 0 && !result) {
+      startTimer();
+    }
+  }, [current, questions]);
+
+  function startTimer() {
+    setTimeLeft(TIMER_DURATION);
+    setTimerActive(true);
+    setQuestionStartTime(Date.now());
+  }
+
+  function handleTimeUp() {
+    setTimerActive(false);
+    // Mark as unanswered if no answer provided
+    if (!answers[current]?.user_answer || answers[current]?.user_answer.trim() === "") {
+      handleAnswerChange("UNANSWERED - Time ran out");
+    }
+    // Auto proceed to next question
+    setTimeout(() => {
+      if (current + 1 < questions.length) {
+        setCurrent(current + 1);
+        setSelectedOption(null);
+      } else {
+        submitAnswers();
+      }
+    }, 1000);
+  }
 
   function fetchQuestions(levelType) {
     setLoading(true);
     axios
-      .post("https://ai-interviewer-67b9.onrender.com/start", { domain, level: levelType })
+      .post("http://127.0.0.1:8000/start", { domain, level: levelType })
       .then((res) => {
         setSessionId(res.data.session_id);
         setQuestions(res.data.questions || []);
@@ -44,6 +84,8 @@ export default function Interview({ domain, onRestart }) {
         id: questions[current]?.id ?? current,
         type: questions[current]?.type ?? "",
         user_answer: value,
+        time_taken: questionStartTime ? (Date.now() - questionStartTime) / 1000 : 0,
+        answered_within_time: timerActive
       };
       return newAnswers;
     });
@@ -59,6 +101,9 @@ export default function Interview({ domain, onRestart }) {
       alert("Please answer the question before proceeding.");
       return;
     }
+    
+    setTimerActive(false);
+    
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
       setSelectedOption(null);
@@ -67,163 +112,137 @@ export default function Interview({ domain, onRestart }) {
     }
   }
 
-  function submitAnswers() {
+  async function submitAnswers() {
     setIsSubmitting(true);
     setLoading(true);
+    setTimerActive(false);
+    
     const formattedAnswers = answers.map((a) => ({
       id: a.id,
       type: a.type.toLowerCase(),
       user_answer: a.user_answer,
+      time_taken: a.time_taken,
+      answered_within_time: a.answered_within_time
     }));
 
-    axios
-      .post("https://ai-interviewer-67b9.onrender.com/evaluate", {
+    try {
+      const res = await axios.post("http://127.0.0.1:8000/evaluate", {
         session_id: sessionId,
         answers: formattedAnswers,
-      })
-      .then((res) => {
-        setResult(res.data);
-        setLoading(false);
-        setIsSubmitting(false);
-      })
-      .catch((err) => {
-        console.error("Evaluation error:", err.response?.data || err);
-        alert("Failed to evaluate answers");
-        setLoading(false);
-        setIsSubmitting(false);
       });
+      
+      setResult(res.data);
+      
+      // Send email to HR if this is the final evaluation
+      if (level === "hard" || res.data.result === "Failed") {
+        await sendEmailToHR(res.data, formattedAnswers);
+      }
+      
+      setLoading(false);
+      setIsSubmitting(false);
+    } catch (err) {
+      console.error("Evaluation error:", err.response?.data || err);
+      alert("Failed to evaluate answers");
+      setLoading(false);
+      setIsSubmitting(false);
+    }
+  }
+
+  async function sendEmailToHR(evaluationResult, userAnswers) {
+    try {
+      const emailData = {
+        to: "msayantan06@gmail.com",
+        subject: `Interview Evaluation Report - ${domain} Domain`,
+        html: generateEmailReport(evaluationResult, userAnswers)
+      };
+
+      // This would typically be sent to your backend to handle email sending
+      await axios.post("http://127.0.0.1:8000/send-email", emailData);
+      setEmailSent(true);
+    } catch (error) {
+      console.error("Failed to send email:", error);
+    }
+  }
+
+  function generateEmailReport(evaluationResult, userAnswers) {
+    const timestamp = new Date().toLocaleString();
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #667eea; text-align: center;">Interview Evaluation Report</h2>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>Candidate Information</h3>
+          <p><strong>Domain:</strong> ${domain}</p>
+          <p><strong>Date:</strong> ${timestamp}</p>
+          <p><strong>Final Score:</strong> ${evaluationResult.score?.toFixed(1) || 'N/A'}/100</p>
+          <p><strong>Result:</strong> ${evaluationResult.result || 'Failed'}</p>
+        </div>
+        
+        <div style="background: #ffffff; padding: 20px; border: 1px solid #e5e5e5; border-radius: 8px;">
+          <h3>Level Performance</h3>
+          <ul>
+            <li>Easy Level: ${scores.easy || 'N/A'}</li>
+            <li>Medium Level: ${scores.medium || 'N/A'}</li>
+            <li>Hard Level: ${scores.hard || 'N/A'}</li>
+          </ul>
+        </div>
+        
+        <div style="background: #ffffff; padding: 20px; border: 1px solid #e5e5e5; border-radius: 8px; margin-top: 20px;">
+          <h3>Detailed Answers</h3>
+          ${userAnswers.map((answer, index) => `
+            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+              <p><strong>Question ${index + 1}:</strong></p>
+              <p><strong>Answer:</strong> ${answer.user_answer}</p>
+              <p><strong>Time Taken:</strong> ${answer.time_taken?.toFixed(1) || 'N/A'}s</p>
+              <p><strong>Within Time Limit:</strong> ${answer.answered_within_time ? 'Yes' : 'No'}</p>
+            </div>
+          `).join('')}
+        </div>
+        
+        <p style="text-align: center; color: #666; margin-top: 30px;">
+          Generated automatically by AI Interviewer System
+        </p>
+      </div>
+    `;
   }
 
   if (loading) {
-    return (
-      <div className="loading-container">
-        <motion.div
-          className="loading-spinner"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.h3
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="loading-text"
-        >
-          {isSubmitting ? "Evaluating your answers..." : "Loading questions..."}
-        </motion.h3>
-        <motion.div
-          className="loading-progress"
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      </div>
-    );
+    return <LoadingScreen isSubmitting={isSubmitting} />;
   }
 
   if (result) {
-    const isPassed = result.result === "Passed";
-    const currentScore = result.score;
-
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="results-container"
-      >
-        <motion.div
-          className="results-card"
-          initial={{ y: 50 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <motion.div
-            className={`score-circle ${isPassed ? "passed" : "failed"}`}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-          >
-            <div className="score-value">{currentScore?.toFixed(0) ?? "0"}</div>
-            <div className="score-label">/ 100</div>
-          </motion.div>
+      <ResultsCard
+        result={result}
+        level={level}
+        scores={scores}
+        emailSent={emailSent}
+        onNextLevel={() => {
+          const currentScore = result.score;
+          setScores((prev) => ({ ...prev, [level]: currentScore }));
 
-          <motion.h2
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="results-title"
-          >
-            Interview Level: {level.charAt(0).toUpperCase() + level.slice(1)}
-          </motion.h2>
+          if (level === "easy" && currentScore >= 50) {
+            setLevel("medium");
+            fetchQuestions("medium");
+          } else if (level === "medium" && currentScore >= 50) {
+            setLevel("hard");
+            fetchQuestions("hard");
+          } else {
+            setLevel("final");
+          }
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className={`result-status ${isPassed ? "passed" : "failed"}`}
-          >
-            {result.result ?? "Failed"}
-          </motion.div>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 }}
-            onClick={() => {
-              setScores((prev) => ({ ...prev, [level]: currentScore }));
-
-              if (level === "easy" && currentScore >= 50) {
-                setLevel("medium");
-                fetchQuestions("medium");
-              } else if (level === "medium" && currentScore >= 50) {
-                setLevel("hard");
-                fetchQuestions("hard");
-              } else {
-                setLevel("final");
-              }
-
-              setResult(null);
-              setAnswers([]);
-              setCurrent(0);
-              setSelectedOption(null);
-            }}
-            className="restart-button"
-          >
-            <span>
-              {level === "hard" || result.result === "Failed"
-                ? "View Final Result"
-                : "Next Level"}
-            </span>
-          </motion.button>
-        </motion.div>
-      </motion.div>
+          setResult(null);
+          setAnswers([]);
+          setCurrent(0);
+          setSelectedOption(null);
+          setEmailSent(false);
+        }}
+      />
     );
   }
 
   if (level === "final") {
-    const passed =
-      (scores.easy ?? 0) >= 80 ||
-      (scores.medium ?? 0) >= 60 ||
-      (scores.hard ?? 0) >= 40;
-
-    return (
-      <div className="results-container final-summary">
-        <h2>Final Interview Summary</h2>
-        <div className={`final-status ${passed ? "passed" : "failed"}`}>
-          {passed ? "You Passed the Interview 🎉" : "You Did Not Pass 😢"}
-        </div>
-        <ul className="score-breakdown">
-          <li>Easy Level Score: {scores.easy ?? "N/A"}</li>
-          <li>Medium Level Score: {scores.medium ?? "N/A"}</li>
-          <li>Hard Level Score: {scores.hard ?? "N/A"}</li>
-        </ul>
-        <button className="restart-button" onClick={onRestart}>
-          Start New Interview
-        </button>
-      </div>
-    );
+    return <FinalSummary scores={scores} domain={domain} onRestart={onRestart} />;
   }
 
   if (!questions.length) {
@@ -235,7 +254,6 @@ export default function Interview({ domain, onRestart }) {
   }
 
   const question = questions[current];
-  const questionType = question?.type?.toLowerCase() || "";
   const progress = ((current + 1) / questions.length) * 100;
 
   return (
@@ -264,108 +282,25 @@ export default function Interview({ domain, onRestart }) {
         </div>
       </div>
 
-      <motion.div
-        className="question-card"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="question-header">
-          <div className="question-type-badge">
-            {questionType === "mcq" ? "Multiple Choice" : "Text Answer"}
-          </div>
-        </div>
+      <Timer 
+        timeLeft={timeLeft}
+        setTimeLeft={setTimeLeft}
+        timerActive={timerActive}
+        onTimeUp={handleTimeUp}
+        duration={TIMER_DURATION}
+      />
 
-        <h3 className="question-text">
-          {question?.question?.trim() || "No question text available."}
-        </h3>
-
-        <div className="answer-section">
-          {questionType === "mcq" ? (
-            <div className="mcq-options">
-              {question.options && Object.keys(question.options).length > 0 ? (
-                <AnimatePresence>
-                  {Object.entries(question.options).map(([key, value], i) => (
-                    <motion.div
-                      key={key}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className={`option-item ${
-                        answers[current]?.user_answer === key ? "selected" : ""
-                      }`}
-                      onClick={() => handleOptionSelect(key)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className="option-radio">
-                        <motion.div
-                          className="radio-inner"
-                          initial={false}
-                          animate={{
-                            scale:
-                              answers[current]?.user_answer === key ? 1 : 0,
-                          }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                        />
-                      </div>
-                      <span className="option-text">
-                        <strong>{key.toUpperCase()}.</strong> {value}
-                      </span>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              ) : (
-                <p className="no-options">No options available for this MCQ.</p>
-              )}
-            </div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-answer-container"
-            >
-              <textarea
-                rows={5}
-                value={answers[current]?.user_answer || ""}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                className="text-answer"
-                placeholder="Type your detailed answer here..."
-              />
-              <div className="textarea-footer">
-                <span className="char-count">
-                  {answers[current]?.user_answer?.length || 0} characters
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={nextQuestion}
-          className="next-button"
-          disabled={
-            !answers[current]?.user_answer ||
-            answers[current]?.user_answer.trim() === ""
-          }
-        >
-          <span>
-            {current + 1 === questions.length
-              ? "Submit Interview"
-              : "Next Question"}
-          </span>
-          <motion.div
-            className="button-arrow"
-            animate={{ x: [0, 5, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            →
-          </motion.div>
-        </motion.button>
-      </motion.div>
+      <QuestionCard
+        question={question}
+        current={current}
+        answers={answers}
+        selectedOption={selectedOption}
+        onAnswerChange={handleAnswerChange}
+        onOptionSelect={handleOptionSelect}
+        onNext={nextQuestion}
+        isLastQuestion={current + 1 === questions.length}
+        timerActive={timerActive}
+      />
     </motion.div>
   );
 }

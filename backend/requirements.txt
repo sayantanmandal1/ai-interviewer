@@ -8,3 +8,4 @@ pydantic
 python-dotenv
 pdfminer.six
 scikit-learn
+pydantic[email]
