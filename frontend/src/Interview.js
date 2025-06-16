@@ -65,7 +65,7 @@ export default function Interview({ domain, onRestart }) {
   function fetchQuestions(levelType) {
     setLoading(true);
     axios
-      .post("http://127.0.0.1:8000/start", { domain, level: levelType })
+      .post("https://ai-interviewer-67b9.onrender.com/start", { domain, level: levelType })
       .then((res) => {
         setSessionId(res.data.session_id);
         setQuestions(res.data.questions || []);
@@ -126,7 +126,7 @@ export default function Interview({ domain, onRestart }) {
     }));
 
     try {
-      const res = await axios.post("http://127.0.0.1:8000/evaluate", {
+      const res = await axios.post("https://ai-interviewer-67b9.onrender.com/evaluate", {
         session_id: sessionId,
         answers: formattedAnswers,
       });
@@ -157,7 +157,7 @@ export default function Interview({ domain, onRestart }) {
       };
 
       // This would typically be sent to your backend to handle email sending
-      await axios.post("http://127.0.0.1:8000/send-email", emailData);
+      await axios.post("https://ai-interviewer-67b9.onrender.com/send-email", emailData);
       setEmailSent(true);
     } catch (error) {
       console.error("Failed to send email:", error);
