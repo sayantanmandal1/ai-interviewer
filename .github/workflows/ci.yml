@@ -35,7 +35,7 @@ jobs:
 
       - name: Lint and auto-fix with Ruff
         working-directory: backend
-        run: ruff check . --fix
+        run: ruff check . --fix --unsafe-fixes
 
       - name: Ensure no lint errors remain
         working-directory: backend
