@@ -32,7 +32,6 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
   };
 
   const calculateTotalQuestions = () => {
-    // Assuming each level has 5 questions
     return Object.values(scores).filter(score => score !== null).length * 5;
   };
 
@@ -40,7 +39,7 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
     let total = 0;
     Object.values(scores).forEach(score => {
       if (score !== null) {
-        total += Math.round((score / 100) * 5); // Assuming 5 questions per level
+        total += Math.round((score / 100) * 5);
       }
     });
     return total;
@@ -67,22 +66,13 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
   const { strengths, weaknesses } = getStrengthsAndWeaknesses();
 
   const TabButton = ({ tab, label, isActive, onClick }) => (
-    <motion.button
+    <button
       className={`tab-button ${isActive ? 'active' : ''}`}
       onClick={() => onClick(tab)}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
     >
       {label}
-      {isActive && (
-        <motion.div
-          className="tab-indicator"
-          layoutId="tab-indicator"
-          initial={false}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        />
-      )}
-    </motion.button>
+      {isActive && <div className="tab-indicator" />}
+    </button>
   );
 
   const renderOverviewTab = () => (
@@ -90,13 +80,7 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
       {/* Performance Summary */}
       <div className="performance-grid">
         {['easy', 'medium', 'hard'].map((level, index) => (
-          <motion.div
-            key={level}
-            className="performance-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
+          <div key={level} className="performance-card">
             <div className="card-header">
               <h4>{level.charAt(0).toUpperCase() + level.slice(1)} Level</h4>
               <div className={`difficulty-badge difficulty-${level}`}>
@@ -111,13 +95,14 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
                     className="circle-bg"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
-                  <motion.path
+                  <path
                     className="circle"
                     strokeDasharray={`${animatedScores[level] || 0}, 100`}
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    initial={{ strokeDasharray: "0, 100" }}
-                    animate={{ strokeDasharray: `${animatedScores[level] || 0}, 100` }}
-                    transition={{ duration: 1, delay: index * 0.2 }}
+                    style={{
+                      stroke: getPerformanceLevel(scores[level]).color,
+                      transition: 'stroke-dasharray 1s ease-in-out'
+                    }}
                   />
                 </svg>
                 <div className="score-text">
@@ -130,7 +115,7 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
             <div className="performance-details">
               {scores[level] !== null ? (
                 <>
-                  <div className="performance-label">
+                  <div className="performance-label" style={{ color: getPerformanceLevel(scores[level]).color }}>
                     {getPerformanceLevel(scores[level]).level}
                   </div>
                   <div className="pass-status">
@@ -151,17 +136,12 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
                 <div className="not-attempted">Not Attempted</div>
               )}
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {/* Quick Stats */}
-      <motion.div
-        className="quick-stats"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
+      <div className="quick-stats">
         <div className="stat-card">
           <div className="stat-icon">📝</div>
           <div className="stat-info">
@@ -197,19 +177,14 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
             <div className="stat-label">Levels Passed</div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 
   const renderInsightsTab = () => (
     <div className="insights-content">
       {/* Strengths Section */}
-      <motion.div
-        className="insights-section strengths"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <div className="insights-section strengths">
         <h3 className="section-title">
           <span className="section-icon">💪</span>
           Your Strengths
@@ -217,26 +192,21 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
         {strengths.length > 0 ? (
           <div className="strengths-list">
             {strengths.map((strength, index) => (
-              <motion.div
-                key={strength.name}
-                className="strength-item"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-              >
+              <div key={strength.name} className="strength-item">
                 <div className="strength-header">
                   <span className="strength-name">{strength.name} Level</span>
                   <span className="strength-score">{strength.score}%</span>
                 </div>
                 <div className="strength-bar">
-                  <motion.div
+                  <div
                     className="strength-fill"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${strength.score}%` }}
-                    transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }}
+                    style={{ 
+                      width: `${strength.score}%`,
+                      backgroundColor: getPerformanceLevel(strength.score).color
+                    }}
                   />
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
@@ -244,15 +214,10 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
             <p>No levels passed yet. Keep practicing!</p>
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Areas for Improvement */}
-      <motion.div
-        className="insights-section improvements"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.4 }}
-      >
+      <div className="insights-section improvements">
         <h3 className="section-title">
           <span className="section-icon">📈</span>
           Areas for Improvement
@@ -260,13 +225,7 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
         {weaknesses.length > 0 ? (
           <div className="improvements-list">
             {weaknesses.map((weakness, index) => (
-              <motion.div
-                key={weakness.name}
-                className="improvement-item"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-              >
+              <div key={weakness.name} className="improvement-item">
                 <div className="improvement-header">
                   <span className="improvement-name">{weakness.name} Level</span>
                   <span className="improvement-score">{weakness.score}%</span>
@@ -279,7 +238,7 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
                   {weakness.name === 'Hard' && 
                     "Study advanced concepts and work on challenging problems"}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
@@ -287,17 +246,446 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
             <p>Great job! You've passed all attempted levels! 🎉</p>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 
   return (
-    <motion.div
-      className="analytics-dashboard"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="analytics-dashboard">
+      <style jsx>{`
+        .analytics-dashboard {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          padding: 2rem;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .dashboard-header {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 2rem;
+          margin-bottom: 2rem;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-button {
+          background: rgba(103, 126, 234, 0.1);
+          border: 1px solid rgba(103, 126, 234, 0.2);
+          color: #667eea;
+          padding: 0.75rem 1.5rem;
+          border-radius: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-bottom: 1.5rem;
+        }
+
+        .back-button:hover {
+          background: rgba(103, 126, 234, 0.2);
+          transform: translateY(-2px);
+        }
+
+        .header-content {
+          text-align: center;
+        }
+
+        .dashboard-title {
+          font-size: 2.5rem;
+          font-weight: 700;
+          color: #2d3748;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .dashboard-subtitle {
+          font-size: 1.125rem;
+          color: #64748b;
+          margin: 0.5rem 0 0 0;
+          font-weight: 500;
+        }
+
+        .tab-navigation {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 2rem;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          padding: 0.5rem;
+          border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-button {
+          flex: 1;
+          padding: 1rem 2rem;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          font-weight: 600;
+          font-size: 1rem;
+          cursor: pointer;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .tab-button.active {
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+          box-shadow: 0 8px 25px rgba(103, 126, 234, 0.3);
+        }
+
+        .tab-button:hover:not(.active) {
+          background: rgba(103, 126, 234, 0.1);
+          color: #667eea;
+        }
+
+        .tab-content {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 2rem;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          margin-bottom: 2rem;
+        }
+
+        .performance-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+
+        .performance-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 16px;
+          padding: 1.5rem;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          transition: all 0.3s ease;
+        }
+
+        .performance-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .card-header h4 {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #2d3748;
+        }
+
+        .difficulty-badge {
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .difficulty-easy {
+          background: rgba(16, 185, 129, 0.1);
+          color: #059669;
+        }
+
+        .difficulty-medium {
+          background: rgba(59, 130, 246, 0.1);
+          color: #2563eb;
+        }
+
+        .difficulty-hard {
+          background: rgba(245, 158, 11, 0.1);
+          color: #d97706;
+        }
+
+        .score-display {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .score-circle-small {
+          position: relative;
+          width: 120px;
+          height: 120px;
+        }
+
+        .circular-chart {
+          width: 100%;
+          height: 100%;
+        }
+
+        .circle-bg {
+          fill: none;
+          stroke: rgba(203, 213, 225, 0.3);
+          stroke-width: 3.8;
+        }
+
+        .circle {
+          fill: none;
+          stroke-width: 3.8;
+          stroke-linecap: round;
+          transform: rotate(-90deg);
+          transform-origin: 50% 50%;
+        }
+
+        .score-text {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          text-align: center;
+        }
+
+        .score-number {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #2d3748;
+        }
+
+        .score-percent {
+          font-size: 1rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .performance-details {
+          text-align: center;
+        }
+
+        .performance-label {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
+
+        .status-indicator {
+          padding: 0.25rem 0.75rem;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .status-indicator.passed {
+          background: rgba(16, 185, 129, 0.1);
+          color: #059669;
+        }
+
+        .status-indicator.failed {
+          background: rgba(239, 68, 68, 0.1);
+          color: #dc2626;
+        }
+
+        .not-attempted {
+          color: #64748b;
+          font-style: italic;
+        }
+
+        .quick-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+        }
+
+        .stat-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 16px;
+          padding: 1.5rem;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+          font-size: 1.5rem;
+          width: 3rem;
+          height: 3rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          border-radius: 12px;
+        }
+
+        .stat-number {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #2d3748;
+          margin: 0;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: #64748b;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .insights-content {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+          .insights-content {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .insights-section {
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 16px;
+          padding: 1.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #2d3748;
+          margin: 0 0 1.5rem 0;
+        }
+
+        .section-icon {
+          font-size: 1.5rem;
+        }
+
+        .strength-item, .improvement-item {
+          margin-bottom: 1.5rem;
+        }
+
+        .strength-header, .improvement-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .strength-name, .improvement-name {
+          font-weight: 600;
+          color: #2d3748;
+        }
+
+        .strength-score, .improvement-score {
+          font-weight: 700;
+          font-size: 0.875rem;
+        }
+
+        .strength-bar {
+          height: 8px;
+          background: rgba(203, 213, 225, 0.3);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .strength-fill {
+          height: 100%;
+          transition: width 1s ease-in-out;
+          border-radius: 4px;
+        }
+
+        .improvement-suggestion {
+          font-size: 0.875rem;
+          color: #64748b;
+          font-style: italic;
+          margin-top: 0.5rem;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 2rem;
+          color: #64748b;
+        }
+
+        .empty-state.success {
+          color: #059669;
+        }
+
+        .dashboard-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+        }
+
+        .action-button {
+          padding: 1rem 2rem;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border: none;
+        }
+
+        .action-button.secondary {
+          background: rgba(255, 255, 255, 0.9);
+          color: #667eea;
+          border: 1px solid rgba(103, 126, 234, 0.2);
+        }
+
+        .action-button.secondary:hover {
+          background: white;
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-button.primary {
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+          box-shadow: 0 10px 25px rgba(103, 126, 234, 0.3);
+        }
+
+        .action-button.primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 15px 35px rgba(103, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+          .analytics-dashboard {
+            padding: 1rem;
+          }
+          
+          .performance-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .quick-stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .dashboard-actions {
+            flex-direction: column;
+          }
+        }
+      `}</style>
+
       <div className="dashboard-header">
         <motion.button
           className="back-button"
@@ -334,19 +722,14 @@ export default function AnalyticsDashboard({ scores, domain, onBack, onRestart }
         {activeTab === 'insights' && renderInsightsTab()}
       </div>
 
-      <motion.div
-        className="dashboard-actions"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
+      <div className="dashboard-actions">
         <button className="action-button secondary" onClick={onBack}>
           View Summary
         </button>
         <button className="action-button primary" onClick={onRestart}>
           Start New Interview
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
