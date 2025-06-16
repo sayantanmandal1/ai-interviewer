@@ -207,7 +207,11 @@ export default function Interview({ domain, onRestart }) {
   }
 
   if (loading) {
-    return <LoadingScreen isSubmitting={isSubmitting} />;
+    return (
+    <AnimatePresence mode="wait">
+      {loading && <LoadingScreen isSubmitting={isSubmitting} key="loading-screen" />}
+    </AnimatePresence>
+  );
   }
 
   if (result) {

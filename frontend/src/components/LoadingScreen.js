@@ -95,22 +95,6 @@ export default function LoadingScreen({ isSubmitting = false }) {
           ))}
         </div>
 
-        {/* Animated Progress Bar */}
-        <div className="progress-container">
-          <div className="progress-bar">
-            <motion.div
-              className="progress-fill"
-              animate={{
-                width: ["0%", "100%", "0%"]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-          </div>
-        </div>
 
         {/* Additional Info */}
         <motion.div
@@ -276,23 +260,7 @@ export default function LoadingScreen({ isSubmitting = false }) {
           box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
         }
 
-        .progress-container {
-          margin: 2rem 0;
-          width: 300px;
-        }
 
-        .progress-bar {
-          height: 4px;
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 2px;
-          overflow: hidden;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.8));
-          border-radius: 2px;
-        }
 
         .loading-info {
           margin-top: 2rem;
